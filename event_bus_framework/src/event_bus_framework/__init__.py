@@ -58,24 +58,13 @@ from .core import (
     logger,
 )
 
-# RedisStreamsEventBus 尚未实现，会在后续任务中实现
-# 此处只是为了类型检查提供未来的导入
+# 导入 Redis Streams 实现
+from .adapters import RedisStreamsEventBus, MessageHandlerLoopThread
 
-try:
-    # 如果实现类已存在，则导入
-    from .adapters.redis_streams import RedisStreamAdapter, RedisStreamsEventBus, MessageHandlerLoopThread
-    __all__ = [
-        "IEventBus",
-        "RedisStreamsEventBus",
-        "RedisStreamAdapter",
-        "MessageHandlerLoopThread",
-        "EventEnvelope",
-        "EventBusError",
-    ]
-except ImportError:
-    # 否则仅导出接口和核心类
-    __all__ = [
-        "IEventBus", 
-        "EventEnvelope",
-        "EventBusError",
-    ]
+__all__ = [
+    "IEventBus",
+    "RedisStreamsEventBus",
+    "MessageHandlerLoopThread",
+    "EventEnvelope",
+    "EventBusError",
+]
