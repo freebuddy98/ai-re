@@ -1,0 +1,49 @@
+# 事件定义配置文件
+# 用于在服务间共享事件结构定义
+
+events:
+  # 用户消息事件
+  user_message_raw:
+    description: "用户原始消息事件"
+    schema:
+      meta:
+        event_id: "string"
+        source: "string" 
+        timestamp: "integer"
+      user_id: "string"
+      username: "string"
+      platform: "string"
+      channel_id: "string"
+      content:
+        text: "string"
+        attachments: "array"
+      raw_data: "object"
+    example:
+      meta:
+        event_id: "550e8400-e29b-41d4-a716-446655440000"
+        source: "mattermost"
+        timestamp: 1609459200000
+      user_id: "user123"
+      username: "张三"
+      platform: "mattermost"
+      channel_id: "channel456"
+      content:
+        text: "你好，AI助手！"
+        attachments: null
+      raw_data: {}
+
+  # 系统状态事件
+  system_status:
+    description: "系统状态变化事件"
+    schema:
+      service_name: "string"
+      status: "string"
+      timestamp: "integer"
+      details: "object"
+    example:
+      service_name: "input-service"
+      status: "healthy"
+      timestamp: 1609459200000
+      details:
+        version: "0.1.0"
+        uptime: 3600 

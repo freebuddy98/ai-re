@@ -1,0 +1,52 @@
+# AI-RE 助手系统配置文件
+
+# 输入服务配置
+input_service:
+  service_name: "input-service"
+  app_title: "AI-RE 输入服务"
+  app_description: "AI-RE 助手系统的统一外部消息入口"
+  app_version: "0.1.0"
+  
+  # API配置
+  api:
+    host: "0.0.0.0"
+    port: 8001
+    docs_url: "/docs"
+    redoc_url: "/redoc"
+    openapi_url: "/openapi.json"
+  
+  # API路径配置
+  api_paths:
+    mattermost_webhook: "/api/v1/webhook/mattermost"
+    health: "/health"
+    loki_status: "/loki-status"
+  
+  # 主题配置 - 服务发布的主题列表
+  topics:
+    publish:
+      - "user_message_raw"
+    subscribe:
+      - "system_status"
+
+# 事件总线配置
+event_bus:
+  stream_prefix: "ai-re"
+  
+  # Redis配置
+  redis:
+    host: "${REDIS_HOST:-redis}"
+    port: "${REDIS_PORT:-6379}"
+    db: "${REDIS_DB:-0}"
+    password: "${REDIS_PASSWORD:-}"
+    decode_responses: true
+    socket_timeout: 5
+
+# 日志配置
+logging:
+  level: "${LOG_LEVEL:-INFO}"
+  format: "json"
+  file: "app.log"
+  dir: "${LOG_DIR:-/app/logs}"
+  use_json: true
+  enable_loki: "${LOKI_ENABLED:-false}"
+  loki_url: "${LOKI_URL:-http://loki:3100/loki/api/v1/push}" 

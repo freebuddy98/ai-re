@@ -1,130 +1,479 @@
-# AI-RE 项目
+# AI-RE Project
 
-AI-RE是一个基于事件驱动架构的智能助手系统，通过多个微服务协同工作，提供高效、可靠的人工智能响应能力。
+AI-powered Reactive Event processing system with Mattermost integration.
 
-## 项目结构
+## Architecture Overview
 
-AI-RE项目由以下主要模块组成：
+The AI-RE system is built with a microservices architecture using event-driven patterns:
 
-- **事件总线框架 (Event Bus Framework)**: 基于Redis Streams的消息传递系统，为各服务提供可靠的异步通信机制
-- **输入服务 (Input Service)**: 处理来自各种渠道的用户输入
-- **自然语言理解服务 (NLU Service)**: 分析和理解用户意图
-- **对话策略服务 (DPSS)**: 管理对话流程和决策
-- **响应生成服务 (RIMS)**: 生成适当的响应内容
-- **输出服务 (Output Service)**: 将响应传递给用户
+- **Input Service**: Handles webhook requests from Mattermost and publishes messages to event bus
+- **Event Bus Framework**: Redis-based event streaming with message persistence
+- **Configuration Management**: Centralized YAML-based configuration
+- **Logging Integration**: Optional Loki logging for distributed log aggregation
 
-## 事件总线框架
+## Quick Start
 
-事件总线框架为AI-RE系统中的各个服务提供一个统一的、高可靠的、支持事件溯源与重放的异步消息传递机制。
+### Development Setup
 
-### 核心特性
+1. **Clone and Setup Environment**
+```bash
+git clone <repository>
+cd ai-re
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -e libs/event_bus_framework
+pip install -e services/input-service
+pip install -r tests/requirements.txt
+```
 
-- **服务解耦**: 发布者和订阅者互不依赖，通过事件实现松耦合通信
-- **异步通信**: 非阻塞的事件传递提高系统的整体响应性
-- **可靠性**: 至少一次消息处理语义 (At-Least-Once Semantics)
-- **事件溯源**: 通过消息持久化支持事件历史追踪和状态重建
-- **按需重放**: 从任意位置开始消费事件，支持调试和故障恢复
-- **消费者组**: 支持消费者组负载均衡与故障转移
+2. **Configure Services**
+```bash
+# Copy and edit configuration
+cp config/config.yml.example config/config.yml
+# Edit config/config.yml to match your environment
+```
 
-### 快速开始
+3. **Start Dependencies**
+```bash
+# Start Redis (required)
+docker run -d --name redis -p 6379:6379 redis:alpine
 
-#### 安装依赖
+# Start Loki (optional, for logging)
+docker run -d --name loki -p 3100:3100 grafana/loki
+```
+
+### Container Deployment
+
+#### Quick Start with Docker Compose
+```bash
+# Build and start all services
+docker compose up -d
+
+# Check service health
+curl http://localhost:8000/health
+
+# View logs
+docker compose logs -f
+```
+
+#### Production Deployment
+```bash
+# Build production images
+docker compose build --no-cache
+
+# Start with production configuration
+docker compose -f docker-compose.yml up -d
+
+# Monitor services
+docker compose ps
+docker compose logs -f input-service
+```
+
+## Testing Framework
+
+The AI-RE project includes a comprehensive testing framework with multiple test levels:
+
+### Test Types
+
+#### 1. Unit Tests
+Fast, isolated tests for individual components:
+```bash
+./scripts/run_tests.sh --unit
+```
+
+#### 2. Integration Tests  
+Tests for component interactions and external dependencies:
+```bash
+./scripts/run_tests.sh --integration
+```
+
+#### 3. End-to-End Tests
+Complete workflow tests using TestClient:
+```bash
+./scripts/run_tests.sh --e2e
+```
+
+#### 4. **Container-Based Acceptance Tests** 🆕
+Full system tests in Docker container environment:
+```bash
+./scripts/run_tests.sh --acceptance
+```
+
+### Container-Based Acceptance Testing
+
+Our acceptance testing framework validates the complete system in a containerized environment, ensuring production-like reliability.
+
+#### Test Coverage
+
+**A001: Container Orchestration Startup Test**
+- Validates Docker Compose service startup sequence
+- Verifies container health checks and dependencies
+- Tests service discovery and network communication
+
+**A002: Inter-Service Network Communication Test** 
+- Tests container-to-container network connectivity
+- Validates DNS resolution within Docker network
+- Measures network latency and reliability
+
+**A003: API Endpoint Container Access Test**
+- Validates external access through port mapping
+- Tests all API endpoints in containerized environment
+- Verifies response times and error handling
+
+**A004: Data Persistence Verification Test**
+- Tests Redis data persistence across container restarts
+- Validates volume mounting and data integrity
+- Verifies configuration file persistence
+
+**A005: Environment Variable Configuration Test**
+- Validates environment variable injection
+- Tests configuration file loading in containers
+- Verifies service-specific settings
+
+**A006: Container Health Check and Auto-Recovery Test**
+- Tests container health check mechanisms
+- Validates automatic restart on failures
+- Tests dependency startup ordering
+
+**A007: Load Handling Container Performance Test**
+- Concurrent request processing (100 requests, 20 workers)
+- Resource usage monitoring (CPU, memory)
+- Performance metrics validation (response times, throughput)
+
+**A008: Log Collection and Management Test**
+- Validates Loki log collection integration
+- Tests log format and content correctness
+- Verifies log query performance
+
+**A009: Container Network Isolation Test**
+- Tests network security and isolation
+- Validates port access restrictions
+- Ensures proper firewall configuration
+
+**A010: Container Complete Lifecycle Test**
+- Full container lifecycle management
+- Graceful shutdown and startup testing
+- Service availability verification
+
+#### Running Acceptance Tests
+
+**Quick Run - All Tests:**
+```bash
+./scripts/run_tests.sh --acceptance
+```
+
+**Individual Test Categories:**
+```bash
+# Container orchestration tests only
+./scripts/run_container_acceptance_tests.sh --orchestration
+
+# Performance tests only  
+./scripts/run_container_acceptance_tests.sh --performance
+
+# Data persistence tests only
+./scripts/run_container_acceptance_tests.sh --persistence
+
+# All acceptance tests with verbose output
+./scripts/run_container_acceptance_tests.sh --all --verbose
+```
+
+**Environment Variables:**
+```bash
+# Skip acceptance tests
+export SKIP_ACCEPTANCE_TESTS=true
+
+# Enable verbose output
+export VERBOSE=true
+```
+
+#### Prerequisites for Acceptance Tests
+
+1. **Docker Environment:**
+   - Docker 20.10+
+   - Docker Compose v2.0+
+   - Available ports: 8000, 6379, 3100
+
+2. **Python Dependencies:**
+   ```bash
+   pip install docker pytest requests redis psutil
+   ```
+
+3. **System Resources:**
+   - 2GB+ available RAM
+   - 10GB+ available disk space
+   - Network access for image pulling
+
+#### Acceptance Test Reports
+
+Tests generate comprehensive reports in `test-reports/acceptance/`:
+
+- `container_status.txt` - Container state information
+- `container_logs.txt` - Service logs during testing  
+- `system_resources.txt` - Resource usage metrics
+
+#### Performance Benchmarks
+
+**Expected Performance Criteria:**
+- **Success Rate:** > 95% for concurrent requests
+- **Response Time:** < 500ms average, < 2s P99
+- **Resource Usage:** < 512MB memory, < 80% CPU
+- **Startup Time:** < 30s containers, < 60s service ready
+- **Network Latency:** < 10ms between containers
+
+### Complete Test Suite
+
+Run all test levels:
+```bash
+# Run everything
+./scripts/run_tests.sh --all
+
+# Run with coverage report
+./scripts/run_tests.sh --all --coverage
+
+# Skip slow tests  
+./scripts/run_tests.sh --all -m "not slow"
+```
+
+### Test Configuration
+
+Control test execution with environment variables:
+```bash
+export SKIP_INTEGRATION_TESTS=true    # Skip integration tests
+export SKIP_E2E_TESTS=true            # Skip end-to-end tests  
+export SKIP_ACCEPTANCE_TESTS=true     # Skip acceptance tests
+export REDIS_URL="redis://localhost:6379/0"
+export LOKI_URL="http://localhost:3100/loki/api/v1/push"
+```
+
+## API Documentation
+
+### Health Endpoints
+
+**GET /health**
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-06-09T15:18:32.390Z",
+  "redis": {
+    "status": "connected",
+    "host": "redis:6379"
+  }
+}
+```
+
+**GET /loki-status**
+```json
+{
+  "loki_enabled": true,
+  "loki_url": "http://loki:3100/loki/api/v1/push"
+}
+```
+
+### Webhook Endpoints
+
+**POST /api/v1/webhook/mattermost**
+
+Processes Mattermost outgoing webhook requests and publishes events to the message bus.
+
+**Request Body:**
+```json
+{
+  "token": "webhook-token",
+  "team_id": "team123",
+  "team_domain": "myteam",
+  "channel_id": "channel456", 
+  "channel_name": "general",
+  "timestamp": 1622548800000,
+  "user_id": "user789",
+  "user_name": "johndoe",
+  "post_id": "post123",
+  "text": "Hello AI assistant!",
+  "trigger_word": ""
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Webhook processed successfully"
+}
+```
+
+## Configuration
+
+### Configuration File Structure
+
+The system uses a single `config/config.yml` file:
+
+```yaml
+event_bus:
+  redis:
+    url: "redis://redis:6379/0"
+    max_connections: 10
+    retry_on_timeout: true
+    health_check_interval: 30
+  topics:
+    user_message_raw: "ai-re:user_message_raw"
+  
+logging:
+  level: "INFO"
+  enable_loki: true
+  loki_url: "http://loki:3100/loki/api/v1/push"
+```
+
+### Environment Variables
+
+Container deployment supports these environment variables:
+
+- `REDIS_HOST` - Redis hostname (default: redis)
+- `CONFIG_PATH` - Configuration file path
+- `LOKI_URL` - Loki logging endpoint  
+- `LOKI_ENABLED` - Enable/disable Loki logging
+- `SERVICE_NAME` - Service identifier for logging
+
+## Development
+
+### Code Quality
 
 ```bash
-pip install -e .
+# Format code
+black services/ libs/
+
+# Lint code  
+flake8 services/ libs/
+
+# Type checking
+mypy services/input-service/src/
 ```
 
-#### 发布事件
+### Adding New Services
+
+1. Create service directory in `services/`
+2. Add `pyproject.toml` with dependencies
+3. Implement service using event bus framework
+4. Add Docker configuration
+5. Update `docker-compose.yml`
+6. Write tests (unit, integration, e2e, acceptance)
+
+### Event Bus Integration
 
 ```python
-from event_bus_framework import RedisStreamsEventBus
+from event_bus_framework import RedisStreamEventBus, get_logger
 
-# 创建事件总线客户端
-event_bus = RedisStreamsEventBus(
-    redis_url="redis://localhost:6379/0",
-    event_source_name="MyService"
+# Initialize event bus
+event_bus = RedisStreamEventBus()
+
+# Publish events
+message_id = event_bus.publish(
+    topic="user_message_raw",
+    event_data={"user_id": "123", "text": "Hello"}
 )
 
-# 发布事件
-event_id = event_bus.publish(
-    topic="stream:20250603123456:input:raw_message",
-    message_data={"user_id": "123", "message": "Hello"},
-    event_type_hint="UserMessage"
-)
-print(f"Published event with ID: {event_id}")
+# Subscribe to events  
+def message_handler(event_data):
+    logger.info(f"Received: {event_data}")
+
+event_bus.subscribe("user_message_raw", message_handler)
 ```
 
-#### 订阅事件
+## Monitoring and Logs
 
-```python
-def message_handler(message_id, event_envelope, actual_payload):
-    print(f"Received message {message_id}")
-    print(f"Event type: {event_envelope['event_type']}")
-    print(f"Payload: {actual_payload}")
-    
-    # 处理完成后确认消息
-    event_bus.acknowledge(
-        topic="stream:20250603123456:input:raw_message",
-        group_name="ProcessingGroup",
-        message_ids=[message_id]
-    )
-
-# 订阅事件
-event_bus.subscribe(
-    topic="stream:20250603123456:input:raw_message",
-    handler_function=message_handler,
-    group_name="ProcessingGroup",
-    consumer_name="Worker1",
-    auto_acknowledge=False  # 建议手动确认
-)
-```
-
-## 开发环境设置
-
-### 前提条件
-
-- Python 3.8+
-- Redis服务器
-
-### 安装步骤
-
-1. 克隆仓库
-   ```bash
-   git clone https://github.com/yourusername/ai-re.git
-   cd ai-re
-   ```
-
-2. 创建并激活虚拟环境
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/Mac
-   # 或
-   .venv\Scripts\activate  # Windows
-   ```
-
-3. 安装项目依赖
-   ```bash
-   pip install -e .
-   ```
-
-4. 安装开发依赖
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-## 运行测试
+### Container Monitoring
 
 ```bash
-# 运行单元测试
-pytest tests/unit
+# View container status
+docker compose ps
 
-# 运行集成测试
-pytest tests/integration
+# Monitor resource usage
+docker stats
 
-# 运行特定模块的测试
-pytest tests/unit/test_redis_streams.py
+# View service logs
+docker compose logs -f input-service
+docker compose logs -f redis
+docker compose logs -f loki
 ```
 
-## 许可证
+### Log Aggregation
 
-本项目采用MIT许可证 - 详见 LICENSE 文件 
+When Loki is enabled, all application logs are automatically shipped to Loki for centralized log management.
+
+**Log Query Examples:**
+```bash
+# Query logs by service
+curl -G -s "http://localhost:3100/loki/api/v1/query" \
+  --data-urlencode 'query={service="input-service"}'
+
+# Query error logs
+curl -G -s "http://localhost:3100/loki/api/v1/query" \
+  --data-urlencode 'query={level="ERROR"}'
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Container startup failures:**
+```bash
+# Check Docker daemon
+docker info
+
+# Check port conflicts
+netstat -tulpn | grep :8000
+
+# Rebuild images
+docker compose build --no-cache
+```
+
+**Test failures:**
+```bash
+# Run with verbose output
+./scripts/run_tests.sh --all --verbose
+
+# Check specific test category
+./scripts/run_tests.sh --integration --verbose
+
+# Skip problematic test categories  
+export SKIP_ACCEPTANCE_TESTS=true
+./scripts/run_tests.sh --all
+```
+
+**Redis connection issues:**
+```bash
+# Test Redis connectivity
+docker compose exec input-service python -c "import redis; r=redis.Redis(host='redis'); print(r.ping())"
+
+# Check Redis logs
+docker compose logs redis
+```
+
+**Performance issues:**
+```bash
+# Monitor resource usage
+docker stats
+
+# Check service logs
+docker compose logs -f input-service
+
+# Run performance tests
+./scripts/run_container_acceptance_tests.sh --performance --verbose
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all test levels pass:
+   ```bash
+   ./scripts/run_tests.sh --all
+   ```
+5. Run acceptance tests to verify container compatibility:
+   ```bash
+   ./scripts/run_tests.sh --acceptance
+   ```
+6. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

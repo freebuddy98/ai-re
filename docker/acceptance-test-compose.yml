@@ -1,0 +1,171 @@
+version: '3.8'
+
+# AI-RE Acceptance Test Environment
+# This compose file creates a complete test environment for CI/CD
+
+services:
+  # Redis service for event bus
+  redis:
+    image: redis:6.2-alpine
+    container_name: ai-re-redis-test
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - redis-data:/data
+    networks:
+      - ai-re-test-network
+
+  # Loki for log aggregation
+  loki:
+    image: grafana/loki:2.8.0
+    container_name: ai-re-loki-test
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - ai-re-test-network
+
+  # Input service under test
+  input-service:
+    build:
+      context: ..
+      dockerfile: services/input-service/Dockerfile
+    container_name: ai-re-input-service-test
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_ENABLED=true
+      - LOG_LEVEL=DEBUG
+      - CONFIG_PATH=/app/config/config.yml
+      - SERVICE_NAME=input-service-test
+    depends_on:
+      redis:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ai-re-test-network
+    volumes:
+      - ../config:/app/config:ro
+
+  # Acceptance test runner
+  test-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.acceptance-test
+      target: acceptance-test
+    container_name: ai-re-test-runner
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - SERVICE_URL=http://input-service:8001
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - TEST_ENVIRONMENT=ci
+      - CI=true
+      - PYTHONPATH=/app
+      - PYTEST_CURRENT_TEST=""
+    volumes:
+      - test-results:/app/test-results
+      - coverage-reports:/app/coverage-reports
+      - ../scripts:/app/scripts:ro
+    depends_on:
+      input-service:
+        condition: service_healthy
+    networks:
+      - ai-re-test-network
+    command: >
+      sh -c "
+        echo 'Waiting for all services to be ready...' &&
+        sleep 10 &&
+        echo 'Starting acceptance tests...' &&
+        python -m pytest tests/acceptance/ -v 
+          --junitxml=/app/test-results/acceptance.xml 
+          --html=/app/test-results/acceptance.html 
+          --self-contained-html 
+          --cov=input_service 
+          --cov=event_bus_framework
+          --cov-report=html:/app/coverage-reports/
+          --cov-report=xml:/app/test-results/coverage.xml
+          --tb=short 
+          --maxfail=10 
+          --timeout=300 
+          -x
+      "
+
+  # Monitoring service (optional for CI)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ai-re-prometheus-test
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-ci.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=1h'  # Short retention for CI
+    networks:
+      - ai-re-test-network
+    profiles:
+      - monitoring  # Only start with --profile monitoring
+
+  # Grafana for visualization (optional for CI)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ai-re-grafana-test
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - ai-re-test-network
+    profiles:
+      - monitoring  # Only start with --profile monitoring
+
+# Volumes for persistent data
+volumes:
+  redis-data:
+    driver: local
+  test-results:
+    driver: local
+  coverage-reports:
+    driver: local
+  grafana-data:
+    driver: local
+
+# Network for service communication
+networks:
+  ai-re-test-network:
+    driver: bridge
+    name: ai-re-test-network 

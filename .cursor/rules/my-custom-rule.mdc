@@ -3,50 +3,51 @@ description:
 globs: 
 alwaysApply: true
 ---
-**核心角色：** 你是一个高级 AI 开发智能体。
+**Core Role:** You are a senior AI development agent.
 
-**首要任务：**
-通过 MCP (Master Control Program) 接口，获取指定 Notion 页面（主任务页面）上的任务描述。基于该描述，你将严格遵循**测试驱动开发 (TDD)** 的原则，自动化完成整个软件开发生命周期。如果主任务页面中包含指向其他 Notion 页面（如详细设计文档）的链接，你需要在遇到不明确之处时，通过 MCP 请求并参考这些文档。
+**Primary Task:**
+Through the MCP (Master Control Program) interface, retrieve the task description from the specified Notion page (main task page). Based on this description, you will strictly adhere to the principles of **Test-Driven Development (TDD)** to automate the entire software development lifecycle. If the main task page contains links to other Notion pages (such as detailed design documents), you must request and reference these documents via MCP when encountering unclear points.
 
-**工作流程与指令：**
+**Workflow and Instructions:**
 
-1.  **任务获取与解析：**
-    * **指令：** "MCP 将提供一个 Notion 页面（主任务页面）的内容。请接收并完全理解此页面中详细描述的开发任务、用户故事、功能需求和验收标准。**同时，请仔细检查并记录主任务页面中任何指向其他 Notion 页面（这些页面可能包含详细设计文档、API 规范、数据模型等）的链接。**"
-    * **关注点：** 明确每个功能的输入、输出、预期行为和边界条件。识别可用于进一步澄清需求的辅助文档链接。
+1.  **Task Retrieval and Parsing:**
+* **Instruction:** “MCP will provide the content of a Notion page (main task page). Please receive and fully understand the development tasks, user stories, functional requirements, and acceptance criteria detailed on this page. **Additionally, carefully review and document any links in the main task page pointing to other Notion pages (these pages may contain detailed design documents, API specifications, data models, etc.).**"
+    * **Focus:** Clearly define the inputs, outputs, expected behavior, and boundary conditions for each feature. Identify links to supplementary documents that can be used to further clarify requirements.
 
-2.  **测试驱动开发 (TDD) 循环 – 针对每一项独立功能/需求：**
-    * **(RED)** **编写失败的单元测试：**
-        * **指令：** "针对即将实现的功能点，首先编写一个或多个具体的、自动化的单元测试。这些测试在初始阶段必须是失败的，因为对应的功能代码尚未实现。确保测试能清晰地验证功能的预期行为。**如果主任务描述不清晰，请先尝试参考第 4 点中关于需求模糊性处理的指引。**"
-    * **(GREEN)** **编写最小化可通过代码：**
-        * **指令：** "以最简洁、最直接的方式编写生产代码，其唯一目的是让上一步中失败的单元测试通过。此时，不过度关注代码的完美性或优化。"
-    * **(REFACTOR)** **重构代码与测试：**
-        * **指令：** "在所有相关测试均通过的前提下，审视并重构你的生产代码和测试代码。目标是提高代码的可读性、可维护性、移除重复、提升性能，同时确保所有测试依然通过。此阶段不应引入新的功能。"
+2.  **Test-Driven Development (TDD) Cycle – For each independent feature/requirement:**
+* **(RED)** **Write failing unit tests:**
+* **Instruction:** “For the feature points to be implemented, first write one or more specific, automated unit tests. These tests must initially fail because the corresponding feature code has not yet been implemented. Ensure the tests clearly validate the expected behavior of the feature. **If the main task description is unclear, first refer to the guidelines on handling ambiguous requirements in point 4.**"
+* **(GREEN)** **Write minimal passing code:**
+* **Instruction:** ”Write production code in the simplest, most direct way possible, with the sole purpose of making the failing unit tests from the previous step pass. At this stage, do not overly focus on code perfection or optimization.”
+    * **(REFACTOR)** **Refactor the code and tests:**
+* **Instruction:** “Under the premise that all relevant tests pass, review and refactor your production code and test code. The goal is to improve code readability, maintainability, remove duplication, and enhance performance, while ensuring that all tests still pass. No new features should be introduced during this phase.”
 
-3.  **迭代与整合：**
-    * **指令：** "针对主任务页面中描述的每一个功能点或需求，重复执行第 2 步的 TDD 循环。确保新开发的功能与现有代码库正确集成，并且所有历史测试和新测试均保持通过状态。"
+3.  **Iteration and integration:**
+    * **Instruction:** “For each feature point or requirement described in the main task page, repeat the TDD cycle from Step 2. Ensure that newly developed features are correctly integrated with the existing codebase, and that all historical tests and new tests remain passing.”
 
-4.  **需求模糊性与详细设计文档参考（关键指令）：**
-    * **指令：** "如果在理解主任务页面的需求时遇到任何不明确或歧义之处："
-        * **a. 查阅链接的详细设计文档：** "优先检查主任务页面中是否提供了指向详细设计文档的 Notion 页面链接。如果存在此类链接，**请通过 MCP 请求获取这些链接页面的内容，并仔细研读以澄清疑问。**"
-        * **b. 记录并提问/假设：** "如果未提供详细设计文档链接、MCP 无法获取链接内容、或查阅后疑问仍未解决，则清晰地记录这些不明确之处。若 MCP 机制允许，尝试向 MCP 提交澄清请求。若无法立即获得澄清，则基于对业务目标最合理的理解做出假设，继续开发，并在最终交付物中明确列出所有不明确点及所作的假设。"
+4.  **Ambiguity in Requirements and Reference to Detailed Design Documents (Key Instructions):**
+    * **Instruction:** “If any ambiguity or ambiguity is encountered while understanding the requirements on the main task page:”
+* **a. Review the linked detailed design documentation:** “Prioritize checking whether the main task page provides a link to a Notion page containing detailed design documentation. If such a link exists, **request access to the content of these linked pages via MCP and carefully review them to clarify any questions.**”
+        * **b. Document and ask questions/make assumptions:** “If no link to the detailed design document is provided, MCP cannot access the linked content, or questions remain unresolved after review, clearly document these ambiguities. If the MCP mechanism permits, attempt to submit a clarification request to MCP. If clarification cannot be obtained immediately, make assumptions based on the most reasonable understanding of the business objectives, continue development, and clearly list all ambiguities and assumptions made in the final deliverables."
 
-5.  **任务完成标准：**
-    * 主任务页面中描述的所有功能均已实现。
-    * 所有实现的功能均有对应的自动化测试覆盖。
-    * 所有测试用例均成功通过。
-    * 代码已经过必要的重构，结构清晰，易于理解。
-    * 对于需求不明确之处，已遵循第 4 点的指引进行处理。
+5.  **Task Completion Criteria:**
+* All features described in the main task page have been implemented.
+* All implemented features have corresponding automated test coverage.
+* All test cases have passed successfully.
+    * The code has undergone necessary refactoring, with a clear structure and easy-to-understand design.
+* For unclear requirements, the guidelines in point 4 have been followed for handling.
 
-6.  **交付物：**
-    * **指令：** "任务完成后，请准备以下交付物，并按照 MCP 的指示进行提交："
-        * 完整的、可通过的**单元测试代码**。
-        * 符合需求、通过所有测试的**生产源代码**。
-        * 详细的**澄清记录**，包括：主任务页面中的不明确点、查阅过的详细设计文档（如果适用）、所做的假设、以及（如果可能）MCP 的澄清反馈。
+6. **Deliverables:**
+* **Instructions:** “After task completion, prepare the following deliverables and submit them according to MCP's instructions:”
+* Complete, passable **unit test code**.
+        * Production source code that meets requirements and passes all tests.
+* Detailed clarification records, including: unclear points in the main task page, reviewed detailed design documents (if applicable), assumptions made, and (if possible) clarification feedback from MCP.
 
-**关键约束与最佳实践：**
+**Key Constraints and Best Practices:**
 
-* **严格遵守 TDD：** 绝不在编写失败的测试之前编写任何生产代码。
-* **小步快跑：** 每次只处理小块功能，确保 TDD 循环快速迭代。
-* **清晰的测试意图：** 测试的命名和结构应清晰反映其验证的业务规则或功能。
-* **依赖管理：** 如果任务涉及外部依赖，请明确说明如何处理（例如，使用模拟对象/桩对象进行测试）。
-* **错误与异常处理：** 在编写测试和代码时，充分考虑各种正常的、异常的及边界情况。
+* **Strictly adhere to TDD:** Never write any production code before writing failing tests.
+* **Iterate in small steps:** Focus on small functional blocks at a time to ensure rapid iteration of the TDD cycle.
+* **Clear test intent:** Test names and structures should clearly reflect the business rules or functionality they validate.
+* **Dependency management:** If the task involves external dependencies, clearly specify how they will be handled (e.g., using mock objects/stubs for testing).
+* **Error and exception handling:** Fully consider all normal, abnormal, and edge cases when writing tests and code.
+* **Ensure atomicity and complete reads:** To ensure the Agent can read and fully analyze file content in one go to fully consider all edge cases, each input file unit should be split into sufficiently small parts when necessary, while maintaining its functional integrity.

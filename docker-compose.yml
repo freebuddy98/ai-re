@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - ai-re-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Grafana Loki服务（用于本地测试和日志收集）
+  loki:
+    image: grafana/loki
+    ports:
+      - "3100:3100"
+    # command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - ai-re-network
+    restart: unless-stopped
+    volumes:
+      - loki-data:/loki
+
+  input-service:
+    container_name: input-service
+    build:
+      # 构建上下文必须是项目根目录，这样Dockerfile才能访问到libs和services
+      context: .
+      dockerfile: ./services/input-service/Dockerfile
+    environment:
+      - REDIS_HOST=redis
+      - CONFIG_PATH=/app/config/config.yml
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_ENABLED=true
+      - SERVICE_NAME=input-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    networks:
+      - ai-re-network
+    restart: unless-stopped
+    volumes:
+      # [开发时使用] 挂载本地代码到容器，实现热重载
+      - ./services/input-service/src/input_service:/app/input_service
+      - ./libs/event_bus_framework:/app/libs/event_bus_framework
+      - ./config:/app/config
+      - logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  ai-re-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  logs:
+  loki-data:
+  grafana-data: 
