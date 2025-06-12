@@ -1,0 +1,44 @@
+# --- Test Runner Image for Integration Tests ---
+FROM python:3.12-slim
+
+# Build arguments for mirror configuration
+ARG PIP_INDEX_URL=https://pypi.org/simple/
+ARG PIP_TRUSTED_HOST=pypi.org
+
+# Configure pip to use the specified index
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST}
+
+# Install logcli for Loki log access (using zip format from latest release)
+RUN apt-get update && apt-get install -y wget unzip && \
+    wget -O /tmp/logcli.zip "https://github.com/grafana/loki/releases/download/v3.5.1/logcli-linux-amd64.zip" && \
+    unzip /tmp/logcli.zip -d /tmp/ && \
+    mv /tmp/logcli-linux-amd64 /usr/local/bin/logcli && \
+    chmod +x /usr/local/bin/logcli && \
+    rm -f /tmp/logcli.zip && \
+    apt-get remove -y wget unzip && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create working directory
+WORKDIR /app
+
+# Install test dependencies directly with pip
+RUN pip install --no-cache-dir \
+    pytest==8.4.0 \
+    pytest-asyncio==0.23.8 \
+    pytest-cov==5.0.0 \
+    httpx==0.26.0 \
+    redis==5.3.0 \
+    requests==2.32.4 \
+    pydantic==2.11.5 \
+    pyyaml==6.0.2 \
+    fastapi \
+    uvicorn \
+    python-json-logger
+
+# Set Python path so that modules can be found (will be mounted as volumes)
+ENV PYTHONPATH="/app/input-service/src:/app/libs/event_bus_framework/src:$PYTHONPATH"
+
+# Default command can be overridden by docker-compose command field
+CMD ["pytest", "tests/integration", "-vv"] 

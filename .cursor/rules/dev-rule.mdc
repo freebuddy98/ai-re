@@ -1,14 +1,8 @@
-### **Python Microservices Project Refactoring and Management Specification**
-
-**Version**: 4.0 (Final)
-**Date**: June 11, 2025
-
-#### **Introduction**
-
-This specification aims to provide a clear and complete set of instructions for an AI Agent to refactor an existing Python microservices project into a standardized, manageable, testable, and container-ready monorepo structure.
-
 ---
-
+description: 
+globs: 
+alwaysApply: true
+---
 ### **I. Overall Project Structure**
 
 The project will adopt a monorepo model. All microservices and related code will reside in a single Git repository. The top-level directory should clearly separate service code from cross-service testing code.
@@ -226,80 +220,3 @@ This section defines the standard workflow for developers.
     1.  Ensure you are in the project **root** directory.
     2.  **No virtual environment activation is needed.** Simply run the `make` command. The Makefile and Docker will handle the environment.
     3.  Example: `make test-integration-ab`
-
----
-
-### **VI. Automation Workflow Specification (Makefile)**
-
-The root `Makefile` serves as the single entry point for all automated tasks.
-
-```makefile
-# Makefile in project root
-.PHONY: help test-unit test-integration-ab test-integration-ac test-integration test-e2e clean lint format test-all
-
-# Define all microservice directories
-SERVICES := service_a service_b
-
-# Find the poetry command automatically
-POETRY := $(shell command -v poetry 2> /dev/null)
-
-# ==============================================================================
-# Default Target: Print Help Information
-# ==============================================================================
-help: ## Display this help message
-	@echo "Usage: make <target>"
-	@echo ""
-	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
-
-# ==============================================================================
-# Development Helper Tasks
-# ==============================================================================
-lint: ## (all) Run the linter on all service code
-	@echo "--- Running linter for all services ---"
-	$(POETRY) run ruff check .
-
-format: ## (all) Format all service code
-	@echo "--- Formatting code for all services ---"
-	$(POETRY) run black .
-	$(POETRY) run ruff format .
-
-# ==============================================================================
-# Testing Tasks
-# ==============================================================================
-
-SERVICE ?= $(SERVICES)
-
-test-unit: ## (unit) Run unit tests for a specific service (or all)
-	@for service in $(SERVICE); do \
-		echo "--- Running unit tests for $$service ---"; \
-		(cd ./$$service && $(POETRY) run pytest tests/unit); \
-	done
-
-test-integration-ab: ## (integration) Run integration tests for Service A <-> B
-	@echo "--- Running integration tests for Service A <-> B ---"
-	(cd ./tests/integration && docker-compose --profile test-ab up --build --abort-on-container-exit --exit-code-from test-runner-ab)
-
-test-integration-ac: ## (integration) Run integration tests for Service A <-> C
-	@echo "--- Running integration tests for Service A <-> C ---"
-	(cd ./tests/integration && docker-compose --profile test-ac up --build --abort-on-container-exit --exit-code-from test-runner-ac)
-
-test-integration: test-integration-ab test-integration-ac ## (integration) Run all defined integration test scenarios
-	@echo "--- All integration tests passed ---"
-
-test-e2e: ## (e2e) Run end-to-end tests
-	@echo "--- Running End-to-End tests ---"
-	(cd ./tests/e2e && docker-compose up --build --abort-on-container-exit --exit-code-from test-runner)
-
-test-all: test-unit test-integration ## (all) Run all unit and integration tests
-	@echo "--- All essential tests passed ---"
-```
-
-### **VII. CI/CD Guiding Principles**
-
-1.  **On Pull Request**: The pipeline must run `make lint` and `make test-unit`.
-2.  **On Merge to main/develop**: The pipeline should run `make test-integration` to execute all defined integration test scenarios.
-3.  **Build Production Images**: In the pipeline, navigate to each service directory and run `docker build -t my-registry/service-name:tag .`.
-4.  **After Deploying to Staging**: The pipeline can trigger `make test-e2e`.
-5.  **Deploy to Production**: Deploy the tested and verified images to the production environment.

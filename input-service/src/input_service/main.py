@@ -12,10 +12,10 @@ from pathlib import Path
 from .app import create_app
 # 导入共享模块
 from event_bus_framework import get_logger
-from event_bus_framework.common.config import get_input_service_config
+from event_bus_framework.common.config import get_service_config
 
 # 获取配置
-config = get_input_service_config()
+config = get_service_config('input_service')
 
 # 创建主模块日志器
 logger = get_logger("main")
@@ -24,23 +24,36 @@ logger = get_logger("main")
 def parse_args():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(description="AI-RE 输入服务")
+    
+    # 获取API配置
+    api_config = config.get('api', {})
+    
     parser.add_argument(
         "--host", 
         type=str, 
-        default=config.API_HOST, 
-        help=f"服务监听的主机地址 (默认: {config.API_HOST})"
+        default=api_config.get('host', '0.0.0.0'), 
+        help=f"服务监听的主机地址 (默认: {api_config.get('host', '0.0.0.0')})"
     )
     parser.add_argument(
         "--port", 
         type=int, 
-        default=config.API_PORT, 
-        help=f"服务监听的端口 (默认: {config.API_PORT})"
+        default=api_config.get('port', 8000), 
+        help=f"服务监听的端口 (默认: {api_config.get('port', 8000)})"
     )
+    
+    # 获取Redis配置
+    event_bus_config = config.get('event_bus', {})
+    redis_config = event_bus_config.get('redis', {})
+    redis_host = redis_config.get('host', 'redis')
+    redis_port = redis_config.get('port', 6379)
+    redis_db = redis_config.get('db', 0)
+    redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
+    
     parser.add_argument(
         "--redis-url", 
         type=str, 
-        default=config.REDIS_URL,
-        help=f"Redis连接URL (默认: {config.REDIS_URL})"
+        default=redis_url,
+        help=f"Redis连接URL (默认: {redis_url})"
     )
     parser.add_argument(
         "--config-file",
@@ -71,7 +84,10 @@ def main():
     os.makedirs(args.log_dir, exist_ok=True)
     
     # 记录启动信息
-    logger.info(f"启动 {config.SERVICE_NAME} 服务, 版本: {config.APP_VERSION}")
+    service_name = config.get('service_name', 'input-service')
+    app_version = config.get('app_version', '0.1.0')
+    
+    logger.info(f"启动 {service_name} 服务, 版本: {app_version}")
     logger.info(f"主机: {args.host}, 端口: {args.port}")
     logger.info(f"Redis: {args.redis_url}")
     
@@ -83,7 +99,7 @@ def main():
     
     try:
         # 启动服务
-        logger.info(f"正在启动 {config.SERVICE_NAME} 服务...")
+        logger.info(f"正在启动 {service_name} 服务...")
         uvicorn.run(
             app,
             host=args.host,

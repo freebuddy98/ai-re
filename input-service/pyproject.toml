@@ -1,3 +1,9 @@
+# 将清华源设置为新的默认源，它将取代隐式的 PyPI 源
+[[tool.poetry.source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+priority = "primary"
+
 [tool.poetry]
 name = "input-service"
 version = "0.1.0"
@@ -13,19 +19,17 @@ uvicorn = ">=0.15.0"
 python-multipart = ">=0.0.5"
 redis = ">=4.5.0"
 requests = ">=2.28.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = ">=7.0.0"
-pytest-cov = ">=4.0.0"
-black = ">=22.0.0"
-isort = ">=5.10.0"
-mypy = ">=0.900"
-httpx = ">=0.18.0"
-pytest-asyncio = ">=0.21.0"
+event-bus-framework = { path = "../libs/event_bus_framework", develop = true }
 
 [tool.poetry.scripts]
 input-service = "input_service.main:main"
 
 [build-system]
 requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api" 
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^5.0.0"
+httpx = "^0.26.0" 

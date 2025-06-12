@@ -1,0 +1,55 @@
+services:
+  # --- Auxiliary services -------------------------------------------------
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    ports: ["6379:6379"]
+    profiles: ["test-input"]
+
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    ports: ["3100:3100"]
+    profiles: ["test-input"]
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/tmp/loki
+
+  # --- System Under Test --------------------------------------------------
+  input-service:
+    build:
+      context: ../..
+      dockerfile: ./input-service/Dockerfile
+    profiles: ["test-input"]
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      - redis
+      - loki
+
+  # --- Test Runner --------------------------------------------------------
+  test-runner-input:
+    build:
+      context: ../..
+      dockerfile: ./tests/integration/Dockerfile.test_runner
+    profiles: ["test-input"]
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      - input-service
+      - redis
+      - loki
+    volumes:
+      # Mount source code as volumes instead of copying
+      - ../../input-service/src:/app/input-service/src:ro
+      - ../../libs:/app/libs:ro
+      - ../../tests:/app/tests:ro
+      - ../../config:/app/config:ro
+    command: pytest tests/integration/test_input_service_integration.py -s -vv
+
+volumes:
+  loki-data: 
