@@ -47,6 +47,23 @@ test-unit:
 	@echo "Running unit tests..."
 	@if [ -f .env.test ]; then set -a && . ./.env.test && set +a; fi && ./scripts/run_tests.sh --unit
 
+# 运行验收测试
+test-acceptance:
+	@echo "Running acceptance tests..."
+	@echo "Ensuring Docker Compose services are running..."
+	@docker compose up -d
+	@sleep 10
+	@echo "Running container acceptance tests..."
+	@if [ -f .env.test ]; then set -a && . ./.env.test && set +a; fi && \
+		export PATH=$$PATH:/home/yun/.local/bin && \
+		pytest tests/acceptance/ -v --tb=short --color=yes \
+		--junitxml=test-results/acceptance-test-results.xml \
+		--cov-report=html:test-results/acceptance-coverage \
+		--cov-report=term-missing || \
+		(echo "Acceptance tests failed, cleaning up..."; docker compose down; exit 1)
+	@echo "Acceptance tests completed successfully"
+	@docker compose down
+
 # 开发环境启动
 dev-up:
 	docker-compose up -d

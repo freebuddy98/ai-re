@@ -1,36 +1,31 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "input_service"
+[tool.poetry]
+name = "input-service"
 version = "0.1.0"
 description = "AI-RE 助手系统的统一外部消息入口"
+authors = ["AI-RE Team <team@ai-re.com>"]
 readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "MIT"}
-authors = [
-    {name = "AI-RE Team"}
-]
-dependencies = [
-    "fastapi>=0.68.0",
-    "uvicorn>=0.15.0",
-    "event_bus_framework>=0.1.0",
-    "python-multipart>=0.0.5",
-]
+packages = [{include = "input_service", from = "src"}]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=22.0.0",
-    "isort>=5.10.0",
-    "mypy>=0.900",
-    "httpx>=0.18.0",
-]
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = ">=0.68.0"
+uvicorn = ">=0.15.0"
+python-multipart = ">=0.0.5"
+redis = ">=4.5.0"
+requests = ">=2.28.0"
 
-[project.scripts]
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0.0"
+pytest-cov = ">=4.0.0"
+black = ">=22.0.0"
+isort = ">=5.10.0"
+mypy = ">=0.900"
+httpx = ">=0.18.0"
+pytest-asyncio = ">=0.21.0"
+
+[tool.poetry.scripts]
 input-service = "input_service.main:main"
 
-[tool.setuptools]
-package-dir = {"" = "src"} 
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api" 
