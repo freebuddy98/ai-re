@@ -1,52 +1,58 @@
-# AI-RE 助手系统配置文件
-
-# 输入服务配置
+event_bus:
+  redis:
+    db: ${REDIS_DB:-0}
+    decode_responses: true
+    host: ${REDIS_HOST:-127.0.0.1}
+    password: ${REDIS_PASSWORD:-}
+    port: ${REDIS_PORT:-6379}
+    socket_timeout: 5
+  stream_prefix: ai-re:20250613161330
 input_service:
-  service_name: "input-service"
-  app_title: "AI-RE 输入服务"
-  app_description: "AI-RE 助手系统的统一外部消息入口"
-  app_version: "0.1.0"
-  
-  # API配置
   api:
-    host: "0.0.0.0"
+    docs_url: /docs
+    host: 0.0.0.0
+    openapi_url: /openapi.json
     port: 8001
-    docs_url: "/docs"
-    redoc_url: "/redoc"
-    openapi_url: "/openapi.json"
-  
-  # API路径配置
+    redoc_url: /redoc
   api_paths:
-    mattermost_webhook: "/api/v1/webhook/mattermost"
-    health: "/health"
-    loki_status: "/loki-status"
-  
-  # 主题配置 - 服务发布的主题列表
+    health: /health
+    loki_status: /loki-status
+    mattermost_webhook: /api/v1/webhook/mattermost
+  app_description: AI-RE 助手系统的统一外部消息入口
+  app_title: AI-RE 输入服务
+  app_version: 0.1.0
+  service_name: input-service
   topics:
     publish:
-      - "user_message_raw"
+    - user_message_raw
     subscribe:
-      - "system_status"
-
-# 事件总线配置
-event_bus:
-  stream_prefix: "ai-re"
-  
-  # Redis配置
-  redis:
-    host: "${REDIS_HOST:-redis}"
-    port: "${REDIS_PORT:-6379}"
-    db: "${REDIS_DB:-0}"
-    password: "${REDIS_PASSWORD:-}"
-    decode_responses: true
-    socket_timeout: 5
-
-# 日志配置
+    - system_status
 logging:
-  level: "${LOG_LEVEL:-INFO}"
-  format: "json"
-  file: "app.log"
-  dir: "${LOG_DIR:-/app/logs}"
+  dir: ${LOG_DIR:-/app/logs}
+  enable_loki: ${LOKI_ENABLED:-false}
+  file: app.log
+  format: json
+  level: ${LOG_LEVEL:-DEBUG}
+  loki_url: ${LOKI_URL:-http://loki:3100/loki/api/v1/push}
   use_json: true
-  enable_loki: "${LOKI_ENABLED:-false}"
-  loki_url: "${LOKI_URL:-http://loki:3100/loki/api/v1/push}" 
+nlu_service:
+  app_description: AI-RE 助手系统的自然语言理解服务
+  app_version: 0.1.0
+  consumer_group: nlu-service
+  consumer_name: nlu-worker
+  debug_mode: ${DEBUG_MODE:-true}
+  dpss:
+    base_url: ${DPSS_BASE_URL:-http://127.0.0.1:8080}
+    context_endpoint: /api/v1/dpss/context
+    timeout: 30
+  llm:
+    max_tokens: 2000
+    model: ${LLM_MODEL:-gpt-4o-mini}
+    temperature: 0.2
+    timeout: 60
+  service_name: nlu-service
+  topics:
+    publish:
+    - nlu_uar_result
+    subscribe:
+    - user_message_raw

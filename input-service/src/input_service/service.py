@@ -56,9 +56,9 @@ class MessageProcessingService:
         self.publish_topics = topics.get('publish', [])
         self.subscribe_topics = topics.get('subscribe', [])
         
-        logger.info(f"初始化消息处理服务，事件总线: {type(event_bus).__name__}")
-        logger.info(f"发布主题: {self.publish_topics}")
-        logger.info(f"订阅主题: {self.subscribe_topics}")
+        logger.debug(f"初始化消息处理服务，事件总线: {type(event_bus).__name__}")
+        logger.debug(f"发布主题: {self.publish_topics}")
+        logger.debug(f"订阅主题: {self.subscribe_topics}")
     
     def process_and_publish_webhook_data(self, webhook_data: 'MattermostOutgoingWebhook') -> bool:
         """
@@ -72,7 +72,7 @@ class MessageProcessingService:
         """
         try:
             # 记录接收到的消息
-            logger.info(
+            logger.debug(
                 f"收到 Mattermost 消息: channel={webhook_data.channel_name or webhook_data.channel_id}, "
                 f"user={webhook_data.user_name or webhook_data.user_id}, "
                 f"text={webhook_data.text[:50]}{'...' if len(webhook_data.text) > 50 else ''}"
@@ -105,7 +105,7 @@ class MessageProcessingService:
                 
                 # 记录发布结果
                 if message_id:
-                    logger.info(f"消息发布成功: message_id={message_id}, topic=user_message_raw")
+                    logger.debug(f"消息发布成功: message_id={message_id}, topic=user_message_raw")
                     return True
                 else:
                     logger.error("消息发布失败: 未获得消息ID")

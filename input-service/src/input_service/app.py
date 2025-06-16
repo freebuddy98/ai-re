@@ -77,7 +77,7 @@ def create_app(
         'loki_status': '/loki-status'
     })
     
-    logger.info(f"开始创建 FastAPI 应用: {app_title} v{app_version}")
+    logger.debug(f"开始创建 FastAPI 应用: {app_title} v{app_version}")
     
     # 创建 FastAPI 应用
     app = FastAPI(
@@ -101,23 +101,23 @@ def create_app(
         auth = f":{redis_password}@" if redis_password else ""
         redis_url = f"redis://{auth}{redis_host}:{redis_port}/{redis_db}"
         
-        logger.info(f"创建默认 Redis 事件总线: {redis_url}")
+        logger.debug(f"创建默认 Redis 事件总线: {redis_url}")
         event_bus = RedisStreamEventBus(
             redis_url=redis_url,
             event_source_name=service_name
         )
     else:
-        logger.info(f"使用提供的事件总线: {type(event_bus).__name__}")
+        logger.debug(f"使用提供的事件总线: {type(event_bus).__name__}")
     
     # 创建消息处理服务
-    logger.info("创建消息处理服务")
+    logger.debug("创建消息处理服务")
     message_processor = MessageProcessingService(
         event_bus=event_bus,
         topics_override=topics_override
     )
     
     # 创建 Webhook 处理器并注册路由
-    logger.info("创建 Webhook 处理器并注册路由")
+    logger.debug("创建 Webhook 处理器并注册路由")
     webhook_handler = MattermostWebhookHandler(message_processor=message_processor)
     app.include_router(webhook_handler.router, prefix="")
     
@@ -142,5 +142,5 @@ def create_app(
             "loki_url": loki_url
         }
     
-    logger.info(f"FastAPI 应用创建完成: {service_name}")
+    logger.debug(f"FastAPI 应用创建完成: {service_name}")
     return app 

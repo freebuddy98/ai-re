@@ -67,7 +67,7 @@ class MattermostWebhookHandler:
         self.message_processor = message_processor
         self.router = APIRouter()
         self._setup_routes()
-        logger.info("Mattermost Webhook 处理器初始化完成")
+        logger.debug("Mattermost Webhook 处理器初始化完成")
     
     def _setup_routes(self) -> None:
         """设置路由处理函数"""
@@ -81,7 +81,7 @@ class MattermostWebhookHandler:
             summary="处理 Mattermost Webhook",
             description="接收并处理来自 Mattermost 的 Webhook 推送消息"
         )
-        logger.info(f"注册 Mattermost Webhook 路由: {webhook_path}")
+        logger.debug(f"注册 Mattermost Webhook 路由: {webhook_path}")
     
     async def handle_webhook(self, request: Request) -> JSONResponse:
         """
@@ -94,7 +94,7 @@ class MattermostWebhookHandler:
             JSON 响应，表示处理状态
         """
         client_host = request.client.host if request.client else "unknown"
-        logger.info(f"收到 Webhook 请求: 客户端IP={client_host}")
+        logger.debug(f"收到 Webhook 请求: 客户端IP={client_host}")
         
         try:
             # 解析JSON请求体
@@ -129,7 +129,7 @@ class MattermostWebhookHandler:
             success = self.message_processor.process_and_publish_webhook_data(webhook_data)
             
             if success:
-                logger.info("Webhook 处理成功")
+                logger.debug("Webhook 处理成功")
                 return JSONResponse(
                     content={"status": "success", "message": "Webhook processed successfully"}
                 )

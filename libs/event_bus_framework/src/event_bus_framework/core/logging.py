@@ -70,5 +70,5 @@ def log_event(
     if additional_context:
         log_data.update(additional_context)
     
-    log_method = getattr(logger, log_level.lower(), logger.info)
+    log_method = getattr(logger, log_level.lower(), logger.debug)
     log_method(json.dumps(log_data)) 

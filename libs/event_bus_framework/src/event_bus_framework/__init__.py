@@ -12,6 +12,18 @@ from .core.constants import RedisConstants
 # 导出实现
 from .adapters.redis_streams import RedisStreamEventBus, RedisStreamConsumerGroup
 
+# 导出工厂模式
+from .factory import (
+    EventBusFactory,
+    RedisEventBusFactory,
+    EventBusFactoryRegistry,
+    create_event_bus
+)
+
+# 导出服务管理组件
+from .core.subscription_manager import EventSubscriptionManager
+from .core.service_manager import BaseServiceManager, MessageHandlerRegistry
+
 # 导出common模块组件
 from .common.logger import get_logger
 from .common.config import load_config
@@ -38,3 +50,50 @@ input_service_config = get_service_config('input_service')
 # 版本信息
 __version__ = "0.1.0"
 __author__ = "AI-RE Team"
+
+__all__ = [
+    # 核心接口
+    "IEventBus", 
+    "IEventHandler", 
+    "IEventStorage",
+    
+    # 实现
+    "RedisStreamEventBus", 
+    "RedisStreamConsumerGroup",
+    
+    # 工厂模式
+    "EventBusFactory",
+    "RedisEventBusFactory", 
+    "EventBusFactoryRegistry",
+    "create_event_bus",
+    
+    # 服务管理组件
+    "EventSubscriptionManager",
+    "BaseServiceManager",
+    "MessageHandlerRegistry",
+    
+    # 常量
+    "RedisConstants",
+    
+    # 公共组件
+    "get_logger",
+    "load_config",
+    "get_config",
+    "get_service_config",
+    
+    # 事件模型
+    "BaseEvent",
+    "InputEvent", 
+    "OutputEvent",
+    "ErrorEvent",
+    "ServiceStatusEvent",
+    "EventStatus",
+    "EventPriority", 
+    "EventType",
+    "EventMeta",
+    "MessageContent",
+    "UserMessageRawEvent",
+    
+    # 向后兼容
+    "input_service_config"
+]

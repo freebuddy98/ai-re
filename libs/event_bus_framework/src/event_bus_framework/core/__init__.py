@@ -17,6 +17,8 @@ from .exceptions import (
 from .interfaces import IEventBus
 from .logging import get_logger, log_event, logger
 from .models import EventEnvelope, build_event_envelope
+from .subscription_manager import EventSubscriptionManager
+from .service_manager import BaseServiceManager, MessageHandlerRegistry
 from .utils import (
     build_topic_key,
     decode_redis_stream_message,
@@ -34,6 +36,11 @@ __all__ = [
     # 数据模型
     "EventEnvelope",
     "build_event_envelope",
+    
+    # 服务管理组件
+    "EventSubscriptionManager",
+    "BaseServiceManager", 
+    "MessageHandlerRegistry",
     
     # 常量
     "RedisConstants",

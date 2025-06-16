@@ -87,19 +87,19 @@ def main():
     service_name = config.get('service_name', 'input-service')
     app_version = config.get('app_version', '0.1.0')
     
-    logger.info(f"启动 {service_name} 服务, 版本: {app_version}")
-    logger.info(f"主机: {args.host}, 端口: {args.port}")
-    logger.info(f"Redis: {args.redis_url}")
+    logger.debug(f"启动 {service_name} 服务, 版本: {app_version}")
+    logger.debug(f"主机: {args.host}, 端口: {args.port}")
+    logger.debug(f"Redis: {args.redis_url}")
     
     if args.config_file:
-        logger.info(f"使用配置文件: {args.config_file}")
+        logger.debug(f"使用配置文件: {args.config_file}")
     
     # 创建应用实例
     app = create_app()
     
     try:
         # 启动服务
-        logger.info(f"正在启动 {service_name} 服务...")
+        logger.debug(f"正在启动 {service_name} 服务...")
         uvicorn.run(
             app,
             host=args.host,

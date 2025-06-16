@@ -1,0 +1,180 @@
+dialogue_contexts:
+  channel123:
+    active_questions: []
+    channel_id: channel123
+    current_focus_reis_summary: []
+    recent_history: []
+    retrieval_timestamp_utc: '2025-06-05T10:29:00Z'
+  channel456:
+    active_questions:
+    - question_id: q001
+      question_text: 您说的'快速'具体指什么？是希望页面加载时间少于多少秒？
+      relates_to_attribute: performance_requirement
+      relates_to_rei_id: FR-101
+    - question_id: q002
+      question_text: 支付流程的复杂性主要体现在哪些步骤？是否需要支持多种支付方式？
+      relates_to_attribute: implementation_details
+      relates_to_rei_id: FR-102
+    channel_id: channel456
+    current_focus_reis_summary:
+    - key_attributes_text: '业务目标: 提高用户体验, 关键指标: 下单时间, 用户满意度评分'
+      name_or_summary: 提升下单效率和用户满意度
+      rei_id: G-100
+      rei_type: Goal
+      source_utterances_summary:
+      - 核心目标是提升下单效率和用户满意度。
+      status: Drafting
+    - key_attributes_text: '功能描述: 查询历史订单, 性能要求: 快速响应'
+      name_or_summary: 用户快速查询历史订单
+      rei_id: FR-101
+      rei_type: FunctionalRequirement
+      source_utterances_summary:
+      - 用户应该能够快速查询历史订单
+      - 用户反馈主要是查询历史订单太慢
+      status: Drafting
+    - key_attributes_text: '功能描述: 优化支付体验, 减少支付步骤'
+      name_or_summary: 简化支付流程
+      rei_id: FR-102
+      rei_type: FunctionalRequirement
+      source_utterances_summary:
+      - 支付流程太复杂
+      status: Drafting
+    recent_history:
+    - speaker_type: assistant
+      timestamp_utc: '2025-06-05T10:25:00Z'
+      turn_id: turn001
+      utterance_text: 关于订单系统，我们首先要明确它的核心目标是什么？
+    - simplified_uar_if_available:
+        intent_name: ProposeNewREI
+        key_entity_types:
+        - Goal
+      speaker_type: user
+      timestamp_utc: '2025-06-05T10:26:00Z'
+      turn_id: turn002
+      user_id_if_user: client_A
+      utterance_text: 核心目标是提升下单效率和用户满意度。
+    - speaker_type: assistant
+      timestamp_utc: '2025-06-05T10:27:00Z'
+      turn_id: turn003
+      utterance_text: 很好！那么具体来说，用户在下单过程中遇到的主要痛点是什么？
+    - simplified_uar_if_available:
+        intent_name: ProposeNewREI
+        key_entity_types:
+        - Issue
+        - FunctionalRequirement
+      speaker_type: user
+      timestamp_utc: '2025-06-05T10:28:00Z'
+      turn_id: turn004
+      user_id_if_user: client_A
+      utterance_text: 用户反馈主要是查询历史订单太慢，还有支付流程太复杂。
+    retrieval_timestamp_utc: '2025-06-05T10:30:00Z'
+  default:
+    active_questions:
+    - question_id: q_default_001
+      question_text: 能否详细描述一下这个软件系统的主要功能和目标用户？
+      relates_to_attribute: functional_requirements
+      relates_to_rei_id: G-001
+    channel_id: default
+    current_focus_reis_summary:
+    - key_attributes_text: '业务目标: 构建软件解决方案'
+      name_or_summary: 开发新的软件系统
+      rei_id: G-001
+      rei_type: Goal
+      source_utterances_summary:
+      - 我想开发一个新的软件系统
+      status: Drafting
+    recent_history:
+    - simplified_uar_if_available:
+        intent_name: ProposeNewREI
+        key_entity_types:
+        - Goal
+      speaker_type: user
+      timestamp_utc: '2025-06-05T11:58:00Z'
+      turn_id: default_turn_001
+      user_id_if_user: test_user
+      utterance_text: 我想开发一个新的软件系统
+    retrieval_timestamp_utc: '2025-06-05T12:00:00Z'
+  ecommerce_dev:
+    active_questions:
+    - question_id: q101
+      question_text: B2B和B2C业务在功能上有什么具体差异？比如定价策略、订单流程等？
+      relates_to_attribute: business_requirements
+      relates_to_rei_id: G-200
+    - question_id: q102
+      question_text: 1万单的日订单量是否包含峰值情况？比如促销活动时的订单激增？
+      relates_to_attribute: performance_metrics
+      relates_to_rei_id: NFR-203
+    channel_id: ecommerce_dev
+    current_focus_reis_summary:
+    - key_attributes_text: '业务目标: 构建多业务模式电商平台, 目标用户: 中小企业和个人消费者'
+      name_or_summary: 开发支持B2C和B2B的电商平台
+      rei_id: G-200
+      rei_type: Goal
+      source_utterances_summary:
+      - 我们需要开发一个电商平台，支持B2C和B2B业务
+      status: Drafting
+    - key_attributes_text: '用户类型: B2B客户, 特征: 中小企业'
+      name_or_summary: 中小企业用户
+      rei_id: A-201
+      rei_type: Actor
+      source_utterances_summary:
+      - 主要面向中小企业和个人消费者
+      status: Drafting
+    - key_attributes_text: '用户类型: B2C客户, 特征: 个人用户'
+      name_or_summary: 个人消费者
+      rei_id: A-202
+      rei_type: Actor
+      source_utterances_summary:
+      - 主要面向中小企业和个人消费者
+      status: Drafting
+    - key_attributes_text: '性能指标: 日处理订单1万单, 类型: 吞吐量要求'
+      name_or_summary: 支持日订单量1万单的性能要求
+      rei_id: NFR-203
+      rei_type: NonFunctionalRequirement
+      source_utterances_summary:
+      - 预计日订单量在1万单左右
+      status: Drafting
+    recent_history:
+    - simplified_uar_if_available:
+        intent_name: ProposeNewREI
+        key_entity_types:
+        - Goal
+        - SystemComponent
+      speaker_type: user
+      timestamp_utc: '2025-06-05T10:55:00Z'
+      turn_id: ecom_001
+      user_id_if_user: developer_001
+      utterance_text: 我们需要开发一个电商平台，支持B2C和B2B业务
+    - speaker_type: assistant
+      timestamp_utc: '2025-06-05T10:56:00Z'
+      turn_id: ecom_002
+      utterance_text: 了解，那么这个电商平台的主要用户群体是谁？预期的交易规模如何？
+    - simplified_uar_if_available:
+        intent_name: ProvideClarification
+        key_entity_types:
+        - Actor
+        - NonFunctionalRequirement
+      speaker_type: user
+      timestamp_utc: '2025-06-05T10:57:00Z'
+      turn_id: ecom_003
+      user_id_if_user: developer_001
+      utterance_text: 主要面向中小企业和个人消费者，预计日订单量在1万单左右
+    retrieval_timestamp_utc: '2025-06-05T11:00:00Z'
+  test_channel:
+    active_questions: []
+    channel_id: test_channel
+    current_focus_reis_summary:
+    - key_attributes_text: 测试属性
+      name_or_summary: 测试目标
+      rei_id: TEST-001
+      rei_type: Goal
+      source_utterances_summary:
+      - 这是一个测试消息
+      status: Drafting
+    recent_history:
+    - speaker_type: user
+      timestamp_utc: '2025-06-14T12:00:00Z'
+      turn_id: test_001
+      user_id_if_user: test_user
+      utterance_text: 这是一个测试消息
+    retrieval_timestamp_utc: '2025-06-14T02:46:18.820318+00:00'

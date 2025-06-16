@@ -78,4 +78,5 @@ coverage.xml
 
 # Others
 logs/
-*.log 
+*.log
+.env

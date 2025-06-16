@@ -46,4 +46,33 @@ events:
       timestamp: 1609459200000
       details:
         version: "0.1.0"
-        uptime: 3600 
+        uptime: 3600
+
+  # 话语分析结果事件 (由 NLU 服务发布)
+  nlu_uar_result:
+    description: "NLU 服务发布的话语分析结果 (UAR)"
+    schema:
+      meta:
+        event_id: "string"
+        source: "string" 
+        timestamp: "integer"
+      original_event_id_ref: "string" #与之关联的用户消息事件的ID
+      status: "string"
+      intent: "object"
+      entities: "array"
+      relations: "array"
+      llm_trace: "object"
+    example:
+      event_id: "550e8400-e29b-41d4-a716-446655440000"
+      original_event_id_ref: "550e8400-e29b-41d4-a716-446655440000"
+      status: "success"
+      intent:
+        name: "ProposeNewREI"
+        confidence: 0.92
+        target_rei_id: null
+      entities: []
+      relations: []
+      llm_trace:
+        model_name_used: "gpt-4-turbo"
+        prompt_token_count: 850
+        completion_token_count: 250 

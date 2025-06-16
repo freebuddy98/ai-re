@@ -258,7 +258,7 @@ class TestLoggerUnit:
         
         # 测试不同级别的日志记录
         with patch.object(logger, 'info') as mock_info:
-            logger.info("Test info message")
+            logger.debug("Test info message")
             mock_info.assert_called_once_with("Test info message")
         
         with patch.object(logger, 'error') as mock_error:

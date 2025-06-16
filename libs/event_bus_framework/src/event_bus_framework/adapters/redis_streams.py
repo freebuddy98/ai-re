@@ -78,10 +78,15 @@ class RedisStreamEventBus(IEventBus):
         self.event_source_name = event_source_name
         self.topic_prefix = topic_prefix
         
+        # 存储消费者组和处理器
+        self._consumer_groups = {}
+        self._message_handlers = {}
+        self._running_threads = {}
+        
         # 初始化Redis连接
         try:
-            self.redis_client = redis.from_url(redis_url)
-            logger.info(f"已连接到Redis: {redis_url}")
+            self.redis_client = redis.from_url(redis_url, decode_responses=True)
+            logger.debug(f"已连接到Redis: {redis_url}")
         except Exception as e:
             logger.error(f"连接Redis失败: {str(e)}")
             raise EventBusConnectionError(f"无法连接到Redis: {str(e)}")
@@ -124,7 +129,7 @@ class RedisStreamEventBus(IEventBus):
                 "source": self.event_source_name,
                 "timestamp": int(time.time() * 1000),
                 "id": str(uuid.uuid4()),
-                "data": json.dumps(event_data)
+                "data": json.dumps(event_data, ensure_ascii=False)
             }
             
             # 发布到Redis Stream
@@ -155,26 +160,67 @@ class RedisStreamEventBus(IEventBus):
             group_name: 消费者组名称
             consumer_name: 消费者名称，如果为None则自动生成
         """
-        # 使用消费者组创建订阅
+        topic_key = self._build_topic_key(topic)
+        consumer_name = consumer_name or f"{RedisConstants.DEFAULT_CONSUMER_NAME}-{uuid.uuid4().hex[:8]}"
+        
+        # 创建消费者组
         consumer_group = RedisStreamConsumerGroup(
             redis_client=self.redis_client,
-            topic=self._build_topic_key(topic),
+            topic=topic_key,
             group_name=group_name,
-            consumer_name=consumer_name or f"{RedisConstants.DEFAULT_CONSUMER_NAME}-{uuid.uuid4().hex[:8]}"
+            consumer_name=consumer_name
         )
         
         # 启动消费者组
         consumer_group.create_group()
         
+        # 存储消费者组和处理器
+        subscription_key = f"{topic}:{group_name}:{consumer_name}"
+        self._consumer_groups[subscription_key] = consumer_group
+        self._message_handlers[subscription_key] = handler
+        
+        # 启动消息处理线程
+        self._start_message_processing_thread(topic, group_name, consumer_name, handler, consumer_group)
+        
         # 记录订阅信息
-        logger.info(f"已创建订阅: 主题={topic}, 组={group_name}, 消费者={consumer_name}")
+        logger.debug(f"已创建订阅: 主题={topic}, 组={group_name}, 消费者={consumer_name}")
+    
+    def _start_message_processing_thread(
+        self, 
+        topic: str, 
+        group_name: str, 
+        consumer_name: str, 
+        handler: Union[Callable, IEventHandler],
+        consumer_group: 'RedisStreamConsumerGroup'
+    ) -> None:
+        """启动消息处理线程"""
+        subscription_key = f"{topic}:{group_name}:{consumer_name}"
+        
+        # 如果线程已经在运行，先停止它
+        if subscription_key in self._running_threads:
+            self._running_threads[subscription_key].stop()
+        
+        # 创建并启动新线程
+        thread = MessageProcessingThread(
+            topic=topic,
+            group_name=group_name,
+            consumer_name=consumer_name,
+            handler=handler,
+            consumer_group=consumer_group,
+            event_bus=self
+        )
+        
+        self._running_threads[subscription_key] = thread
+        thread.start()
+        
+        logger.debug(f"已启动消息处理线程: {subscription_key}")
     
     def acknowledge(
         self,
         topic: str,
         group_name: str,
         message_ids: List[str]
-    ) -> None:
+    ) -> bool:
         """
         确认消息已处理
         
@@ -182,22 +228,36 @@ class RedisStreamEventBus(IEventBus):
             topic: 事件主题
             group_name: 消费者组名称
             message_ids: 消息ID列表
+            
+        Returns:
+            bool: 确认是否成功
         """
         try:
             # 构建完整主题键名
             topic_key = self._build_topic_key(topic)
             
             # 确认消息
-            self.redis_client.xack(
+            result = self.redis_client.xack(
                 topic_key,
                 group_name,
                 *message_ids
             )
             
             logger.debug(f"已确认消息: 主题={topic}, 组={group_name}, 消息ID={message_ids}")
+            return result > 0
         except Exception as e:
             logger.error(f"确认消息失败: {str(e)}")
-            raise EventBusSubscriptionError(f"确认消息失败: {str(e)}")
+            return False
+    
+    def stop_all_subscriptions(self) -> None:
+        """停止所有订阅的消息处理线程"""
+        for subscription_key, thread in self._running_threads.items():
+            thread.stop()
+            logger.debug(f"已停止消息处理线程: {subscription_key}")
+        
+        self._running_threads.clear()
+        self._consumer_groups.clear()
+        self._message_handlers.clear()
 
 
 class RedisStreamConsumerGroup:
@@ -244,7 +304,7 @@ class RedisStreamConsumerGroup:
                 id=RedisConstants.REDIS_STREAM_FIRST_ID,
                 mkstream=True
             )
-            logger.info(f"已创建消费者组: {self.group_name} (主题: {self.topic})")
+            logger.debug(f"已创建消费者组: {self.group_name} (主题: {self.topic})")
         except redis.exceptions.ResponseError as e:
             # 忽略"组已存在"错误
             if "BUSYGROUP" in str(e):
@@ -277,20 +337,29 @@ class RedisStreamConsumerGroup:
             result = []
             for stream_name, stream_messages in messages:
                 for message_id, message_data in stream_messages:
-                    # 解析事件数据
-                    event_data = message_data.get("data", "{}")
+                    # 解析事件数据 - 处理bytes键
+                    event_data = message_data.get(b"data") or message_data.get("data", "{}")
+                    if isinstance(event_data, bytes):
+                        event_data = event_data.decode('utf-8')
                     try:
                         parsed_data = json.loads(event_data)
                     except json.JSONDecodeError:
                         logger.error(f"解析消息数据失败: {event_data}")
                         parsed_data = {}
                     
+                    # 获取其他字段 - 处理bytes键
+                    def get_field(data, field_name, default=""):
+                        value = data.get(field_name.encode()) or data.get(field_name, default)
+                        if isinstance(value, bytes):
+                            return value.decode('utf-8')
+                        return str(value) if value else default
+                    
                     # 构建消息对象
                     result.append({
-                        "message_id": message_id,
-                        "source": message_data.get("source", "unknown"),
-                        "timestamp": int(message_data.get("timestamp", 0)),
-                        "id": message_data.get("id", ""),
+                        "message_id": message_id.decode('utf-8') if isinstance(message_id, bytes) else str(message_id),
+                        "source": get_field(message_data, "source", "unknown"),
+                        "timestamp": int(get_field(message_data, "timestamp", "0")),
+                        "id": get_field(message_data, "id", ""),
                         "data": parsed_data
                     })
             
@@ -319,107 +388,99 @@ class RedisStreamConsumerGroup:
             raise EventBusSubscriptionError(f"确认消息失败: {str(e)}")
 
 
-class MessageHandlerLoopThread(threading.Thread):
+class MessageProcessingThread(threading.Thread):
     """
-    消息处理循环线程
+    消息处理线程
     
-    此线程负责从 Redis Stream 读取消息并调用相应的处理器进行处理。
+    负责从Redis Stream读取消息并调用处理器处理
     """
     
     def __init__(
         self,
-        event_bus: RedisStreamEventBus,
         topic: str,
-        handlers: List[IMessageHandler],
-        consumer_group: Optional[str] = None,
-        consumer_name: Optional[str] = None,
+        group_name: str,
+        consumer_name: str,
+        handler: Union[Callable, IEventHandler],
+        consumer_group: 'RedisStreamConsumerGroup',
+        event_bus: 'RedisStreamEventBus'
     ):
-        """
-        初始化消息处理循环线程
+        super().__init__(name=f"MessageProcessor-{topic}-{consumer_name}")
+        self.daemon = True
         
-        Args:
-            event_bus: 事件总线实例
-            topic: 要处理的主题
-            handlers: 消息处理器列表
-            consumer_group: 消费者组名称，如果指定则使用消费者组模式
-            consumer_name: 消费者名称，仅在使用消费者组模式时有效
-        """
-        super().__init__(name=f"MessageHandler-{topic}")
-        self.daemon = True  # 设置为守护线程，主线程退出时自动终止
-        
-        self._event_bus = event_bus
-        self._topic = topic
-        self._handlers = handlers
-        self._consumer_group = consumer_group
-        self._consumer_name = consumer_name or f"consumer-{uuid.uuid4()}"
+        self.topic = topic
+        self.group_name = group_name
+        self.consumer_name = consumer_name
+        self.handler = handler
+        self.consumer_group = consumer_group
+        self.event_bus = event_bus
         self._running = False
-        self._last_id = "0"  # 从头开始消费
     
     def run(self) -> None:
-        """线程主循环，不断读取消息并处理"""
+        """线程主循环"""
         self._running = True
-        logger.info(f"消息处理线程已启动: topic={self._topic}")
+        logger.debug(f"消息处理线程已启动: {self.name}")
         
         while self._running:
             try:
                 # 读取消息
-                messages = self._event_bus._read_messages(
-                    topic=self._topic,
-                    count=10,
-                    block=1000,  # 阻塞 1 秒
-                    consumer_group=self._consumer_group,
-                    consumer_name=self._consumer_name,
-                    last_id=self._last_id
-                )
+                messages = self.consumer_group.read_messages()
                 
-                # 如果使用消费者组模式，messages 的格式是 [(topic, [(id, fields), ...])]
-                # 否则，messages 的格式是 [(id, fields), ...]
-                if self._consumer_group and messages:
-                    # 提取消息列表
-                    messages = messages[0][1]
-                
-                # 处理消息
-                for message_id, fields in messages:
+                # 处理每条消息
+                for message in messages:
+                    if not self._running:
+                        break
+                    
                     try:
-                        # 解析消息
-                        message_str = fields.get(b"message", b"{}")
-                        if isinstance(message_str, bytes):
-                            message_str = message_str.decode("utf-8")
+                        message_id = message["message_id"]
+                        message_data = message["data"]
                         
-                        message_data = json.loads(message_str)
+                        logger.debug(f"MessageProcessingThread: message_id={message_id}")
+                        logger.debug(f"MessageProcessingThread: message_data={message_data}")
+                        logger.debug(f"MessageProcessingThread: message keys={list(message.keys())}")
                         
-                        # 调用所有处理器
-                        for handler in self._handlers:
-                            try:
-                                handler.handle_message(self._topic, message_data)
-                            except Exception as e:
-                                logger.error(
-                                    f"处理器异常: topic={self._topic}, "
-                                    f"handler={handler.__class__.__name__}, error={str(e)}"
-                                )
+                        # 调用处理器
+                        if callable(self.handler):
+                            # 如果是函数处理器，调用时传递三个参数
+                            if hasattr(self.handler, '__code__') and self.handler.__code__.co_argcount >= 3:
+                                # 处理器期望 (message_id, event_envelope, actual_payload) 格式
+                                event_envelope = {
+                                    "source": message.get("source", "unknown"),
+                                    "timestamp": message.get("timestamp", 0),
+                                    "id": message.get("id", ""),
+                                }
+                                self.handler(message_id, event_envelope, message_data)
+                            else:
+                                # 简单处理器，只传递消息数据
+                                self.handler(message_data)
+                        elif hasattr(self.handler, 'handle_message'):
+                            # IEventHandler接口
+                            self.handler.handle_message(self.topic, message_data)
+                        else:
+                            logger.error(f"未知的处理器类型: {type(self.handler)}")
+                            continue
                         
-                        # 更新最后处理的消息 ID
-                        self._last_id = message_id
+                        # 确认消息
+                        self.event_bus.acknowledge(
+                            topic=self.topic.replace(self.event_bus.topic_prefix + ":", ""),  # 移除前缀
+                            group_name=self.group_name,
+                            message_ids=[message_id]
+                        )
                         
-                        # 如果使用消费者组模式，确认消息已处理
-                        if self._consumer_group:
-                            self._event_bus._acknowledge_message(
-                                self._topic,
-                                self._consumer_group,
-                                message_id
-                            )
-                            
-                    except json.JSONDecodeError as e:
-                        logger.error(f"解析消息失败: {str(e)}")
                     except Exception as e:
-                        logger.error(f"处理消息时发生未知错误: {str(e)}")
+                        logger.error(f"处理消息失败: {e}, 消息ID: {message.get('message_id', 'unknown')}")
+                        # 不确认失败的消息，让它们可以重试
                 
+                # 如果没有消息，短暂休眠
+                if not messages:
+                    time.sleep(0.1)
+                    
             except Exception as e:
-                if self._running:  # 只在线程仍在运行时记录错误
-                    logger.error(f"消息处理循环异常: {str(e)}")
+                if self._running:
+                    logger.error(f"消息处理循环异常: {e}")
                     time.sleep(1)  # 避免在错误情况下过快重试
+        
+        logger.debug(f"消息处理线程已停止: {self.name}")
     
     def stop(self) -> None:
-        """停止处理循环"""
-        self._running = False
-        logger.info(f"消息处理线程正在停止: topic={self._topic}") 
+        """停止线程"""
+        self._running = False 

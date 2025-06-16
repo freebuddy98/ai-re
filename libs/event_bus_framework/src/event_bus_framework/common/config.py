@@ -68,7 +68,7 @@ def load_config() -> Dict[str, Any]:
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f) or {}
             config = _resolve_dict(config)
-            logger.info(f"成功加载配置: {config_file}")
+            logger.debug(f"成功加载配置: {config_file}")
             return config
         else:
             logger.warning(f"配置文件不存在: {config_file}")

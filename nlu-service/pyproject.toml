@@ -1,0 +1,62 @@
+# 将清华源设置为新的默认源，它将取代隐式的 PyPI 源
+[[tool.poetry.source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+priority = "primary"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.0"
+pytest-mock = "^3.14.1"
+pytest-asyncio = "^1.0.0"
+
+[project]
+name = "nlu-service"
+version = "0.1.0"
+description = "Natural Language Understanding Service for AI-RE system"
+authors = [
+    {name = "freebuddy",email = "freebuddy98@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.25.0",
+    "litellm>=1.0.0",
+    "pydantic>=2.0.0",
+    "uvloop>=0.19.0",
+    "jinja2>=3.1.0",
+    "redis>=5.0.0",
+    "event_bus_framework @ ../libs/event_bus_framework",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-mock>=3.12.0", 
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.4.0",
+]
+
+[tool.poetry]
+packages = [{include = "nlu_service", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88

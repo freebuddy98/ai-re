@@ -1,0 +1,307 @@
+dialogue_context:
+  description: "DPSS 提供给 NLU 服务的对话上下文结构 - 完整 Schema 定义"
+  
+  enums:
+    speaker_type:
+      description: "对话中发言者的类型，用于区分用户和AI助手的发言"
+      values:
+        - value: "user"
+          description: "真实用户发言"
+        - value: "assistant" 
+          description: "AI助手发言"
+    
+    rei_type:
+      description: "需求工程元素类型，定义了需求分析中可识别的各种元素类别"
+      values:
+        - value: "Goal"
+          description: "高层业务目标或期望达成的成果"
+        - value: "FunctionalRequirement"
+          description: "系统必须执行的具体功能或提供的服务"
+        - value: "NonFunctionalRequirement"
+          description: "系统的质量属性，如性能、安全性、易用性等"
+        - value: "Actor"
+          description: "与系统交互的用户角色、人员、外部系统或组织"
+        - value: "Constraint"
+          description: "对系统设计、实现或项目执行的限制或约束"
+        - value: "Issue"
+          description: "讨论中提出的疑问、关注点、潜在风险或待解决的问题"
+        - value: "DataObject"
+          description: "系统需要处理、存储或引用的重要数据实体或信息"
+        - value: "SystemComponent"
+          description: "系统的某个主要模块或组成部分"
+        - value: "UserStory"
+          description: "从用户视角描述需求的特定表达方式"
+        - value: "UseCase"
+          description: "描述用户与系统交互以达成特定目标的场景"
+        - value: "Stakeholder"
+          description: "对项目结果有兴趣或会受其影响的个人或团体"
+    
+    rei_status:
+      description: "需求工程元素的生命周期状态，表示REI在开发过程中的当前阶段"
+      values:
+        - value: "Drafting"
+          description: "草稿阶段，REI正在初步定义和讨论中"
+        - value: "Review"
+          description: "评审阶段，REI正在接受团队或利益相关者的审查"
+        - value: "Approved"
+          description: "已批准，REI已通过评审并获得正式认可"
+        - value: "Implemented"
+          description: "已实现，REI对应的功能或需求已完成开发"
+        - value: "Deprecated"
+          description: "已废弃，REI不再适用或已被其他需求替代"
+    
+    intent_name:
+      description: "用户对话意图类型，用于识别用户在需求讨论中的沟通目的"
+      values:
+        - value: "ProposeNewREI"
+          description: "提出新的需求工程元素"
+        - value: "ModifyExistingREI"
+          description: "修改或补充已存在的需求工程元素"
+        - value: "ProvideClarification"
+          description: "针对问题提供澄清信息"
+        - value: "ConfirmUnderstanding"
+          description: "确认对某个理解或表述的认同"
+        - value: "DenyUnderstanding"
+          description: "否认或不同意某个理解或表述"
+        - value: "AskQuestion"
+          description: "提出问题或疑问"
+        - value: "GeneralStatement"
+          description: "一般性陈述，与具体需求元素关联较弱"
+        - value: "ChitChat"
+          description: "闲聊或与需求无关的对话"
+        - value: "Unknown"
+          description: "无法明确判断的意图类型"
+  
+  schema:
+    DialogueContext:
+      type: "object"
+      required: ["channel_id"]
+      properties:
+        channel_id:
+          type: "string"
+          description: "当前对话的频道 ID，用于追踪会话"
+        
+        retrieval_timestamp_utc:
+          type: "string"
+          format: "date-time"
+          description: "本次上下文检索生成的时间戳 (ISO8601 UTC)"
+          default: "auto-generated UTC timestamp"
+        
+        recent_history:
+          type: "array"
+          items:
+            $ref: "#/components/ConversationTurn"
+          default: []
+          description: "最近 N 轮对话历史"
+        
+        current_focus_reis_summary:
+          type: "array"
+          items:
+            $ref: "#/components/CurrentFocusREI"
+          default: []
+          description: "DPSS 判断的当前对话核心焦点 REI 摘要信息"
+        
+        active_questions:
+          type: "array"
+          items:
+            $ref: "#/components/ActiveQuestion"
+          default: []
+          description: "当前系统中正在等待用户回答的未决问题"
+    
+    ConversationTurn:
+      type: "object"
+      required: ["turn_id", "speaker_type", "utterance_text", "timestamp_utc"]
+      properties:
+        turn_id:
+          type: "string"
+          description: "该轮次在源系统的唯一标识 (如 Mattermost post.id)"
+        
+        speaker_type:
+          type: "string"
+          enum: ["user", "assistant"]
+          description: "发言者类型"
+        
+        user_id_if_user:
+          type: "string"
+          nullable: true
+          description: "如果发言者是 user，则为其 ID"
+        
+        utterance_text:
+          type: "string"
+          description: "该轮次的原始文本内容"
+        
+        timestamp_utc:
+          type: "string"
+          format: "date-time"
+          description: "该轮次发生的时间戳 (ISO8601 UTC)"
+          default: "auto-generated UTC timestamp"
+        
+        simplified_uar_if_available:
+          $ref: "#/components/SimplifiedUAR"
+          nullable: true
+          description: "(可选) 如果该轮用户发言已有 UAR，DPSS可提供其摘要信息"
+    
+    SimplifiedUAR:
+      type: "object"
+      properties:
+        intent_name:
+          type: "string"
+          enum: 
+            - "ProposeNewREI"
+            - "ModifyExistingREI"
+            - "ProvideClarification"
+            - "ConfirmUnderstanding"
+            - "DenyUnderstanding"
+            - "AskQuestion"
+            - "GeneralStatement"
+            - "ChitChat"
+            - "Unknown"
+          nullable: true
+          description: "识别出的主要意图名称"
+        
+        key_entity_types:
+          type: "array"
+          items:
+            type: "string"
+            enum:
+              - "Goal"
+              - "FunctionalRequirement"
+              - "NonFunctionalRequirement"
+              - "Actor"
+              - "Constraint"
+              - "Issue"
+              - "DataObject"
+              - "SystemComponent"
+              - "UserStory"
+              - "UseCase"
+              - "Stakeholder"
+          default: []
+          description: "识别出的关键实体类型列表"
+    
+    CurrentFocusREI:
+      type: "object"
+      required: ["rei_id", "rei_type", "name_or_summary", "status"]
+      properties:
+        rei_id:
+          type: "string"
+          description: "REI 在知识图谱中的唯一 ID"
+        
+        rei_type:
+          type: "string"
+          enum:
+            - "Goal"
+            - "FunctionalRequirement"
+            - "NonFunctionalRequirement"
+            - "Actor"
+            - "Constraint"
+            - "Issue"
+            - "DataObject"
+            - "SystemComponent"
+            - "UserStory"
+            - "UseCase"
+            - "Stakeholder"
+          description: "REI 的类型 (枚举值)"
+        
+        name_or_summary:
+          type: "string"
+          description: "REI 的名称或核心内容摘要"
+        
+        status:
+          type: "string"
+          enum: ["Drafting", "Review", "Approved", "Implemented", "Deprecated"]
+          description: "REI 当前的生命周期状态"
+        
+        key_attributes_text:
+          type: "string"
+          nullable: true
+          description: "(可选) 该 REI 的1-2个最关键属性及其当前值的文本片段，帮助LLM理解"
+        
+        source_utterances_summary:
+          type: "array"
+          items:
+            type: "string"
+          default: []
+          description: "(可选) 定义或最近讨论此 REI 时的1-2句关键用户发言摘要"
+    
+    ActiveQuestion:
+      type: "object"
+      required: ["question_id", "question_text"]
+      properties:
+        question_id:
+          type: "string"
+          description: "DPSS 内部的问题唯一ID"
+        
+        question_text:
+          type: "string"
+          description: "用户或系统提出的完整问题文本"
+        
+        relates_to_rei_id:
+          type: "string"
+          nullable: true
+          description: "(可选) 此问题关联的 REI ID"
+        
+        relates_to_attribute:
+          type: "string"
+          nullable: true
+          description: "(可选) 此问题关联的 REI 属性名"
+  
+  components:
+    ConversationTurn:
+      $ref: "#/schema/ConversationTurn"
+    
+    SimplifiedUAR:
+      $ref: "#/schema/SimplifiedUAR"
+    
+    CurrentFocusREI:
+      $ref: "#/schema/CurrentFocusREI"
+    
+    ActiveQuestion:
+      $ref: "#/schema/ActiveQuestion"
+  
+  examples:
+    basic_example:
+      channel_id: "channel123"
+      retrieval_timestamp_utc: "2025-06-05T10:29:00Z"
+      recent_history: []
+      current_focus_reis_summary: []
+      active_questions: []
+    
+    comprehensive_example:
+      channel_id: "channel456"
+      retrieval_timestamp_utc: "2025-06-05T10:30:00Z"
+      recent_history:
+        - turn_id: "turn001"
+          speaker_type: "assistant"
+          utterance_text: "关于订单系统，我们首先要明确它的核心目标是什么？"
+          timestamp_utc: "2025-06-05T10:25:00Z"
+        - turn_id: "turn002"
+          speaker_type: "user"
+          user_id_if_user: "client_A"
+          utterance_text: "核心目标是提升下单效率和用户满意度。"
+          timestamp_utc: "2025-06-05T10:26:00Z"
+          simplified_uar_if_available:
+            intent_name: "ProposeNewREI"
+            key_entity_types: ["Goal"]
+      
+      current_focus_reis_summary:
+        - rei_id: "G-100"
+          rei_type: "Goal"
+          name_or_summary: "提升下单效率和用户满意度"
+          status: "Drafting"
+          key_attributes_text: "业务目标: 提高用户体验, 关键指标: 下单时间, 用户满意度评分"
+          source_utterances_summary: 
+            - "核心目标是提升下单效率和用户满意度。"
+        
+        - rei_id: "FR-101"
+          rei_type: "FunctionalRequirement"
+          name_or_summary: "用户快速查询历史订单"
+          status: "Drafting"
+          key_attributes_text: "功能描述: 查询历史订单, 性能要求: 快速响应"
+          source_utterances_summary:
+            - "用户应该能够快速查询历史订单"
+      
+      active_questions:
+        - question_id: "q001"
+          question_text: "您说的'快速'具体指什么？是希望页面加载时间少于多少秒？"
+          relates_to_rei_id: "FR-101"
+          relates_to_attribute: "performance_requirement" 

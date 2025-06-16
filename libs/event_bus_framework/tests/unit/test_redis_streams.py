@@ -13,7 +13,7 @@ import redis
 from event_bus_framework.adapters.redis_streams import (
     RedisStreamEventBus, 
     RedisStreamConsumerGroup,
-    MessageHandlerLoopThread
+    MessageProcessingThread
 )
 from event_bus_framework.core.constants import RedisConstants
 from event_bus_framework.core.exceptions import (
@@ -252,10 +252,10 @@ class TestRedisStreamConsumerGroup:
             pytest.fail("Consumer group was not created successfully")
 
 
-class TestMessageHandlerLoopThread:
-    """测试 MessageHandlerLoopThread 类的功能。"""
+class TestMessageProcessingThread:
+    """测试 MessageProcessingThread 类的功能。"""
 
-    def test_init(self, redis_event_bus):
+    def test_init(self, redis_event_bus, fake_redis_client):
         """测试初始化消息处理线程。"""
         from event_bus_framework.adapters.redis_streams import IMessageHandler
 
@@ -263,24 +263,29 @@ class TestMessageHandlerLoopThread:
             def handle_message(self, topic: str, message_data: Dict[str, Any]) -> None:
                 pass
 
-        handlers = [MockHandler()]
-
-        thread = MessageHandlerLoopThread(
-            event_bus=redis_event_bus,
+        mock_consumer_group = RedisStreamConsumerGroup(
+            redis_client=fake_redis_client,
             topic="test_topic",
-            handlers=handlers,
-            consumer_group="test_group",
+            group_name="test_group",
             consumer_name="test_consumer"
         )
 
-        assert thread._event_bus == redis_event_bus
-        assert thread._topic == "test_topic"
-        assert thread._handlers == handlers
-        assert thread._consumer_group == "test_group"
-        assert thread._consumer_name == "test_consumer"
+        thread = MessageProcessingThread(
+            topic="test_topic",
+            group_name="test_group",
+            consumer_name="test_consumer",
+            handler=MockHandler(),
+            consumer_group=mock_consumer_group,
+            event_bus=redis_event_bus
+        )
+
+        assert thread.event_bus == redis_event_bus
+        assert thread.topic == "test_topic"
+        assert thread.group_name == "test_group"
+        assert thread.consumer_name == "test_consumer"
         assert thread._running is False
 
-    def test_thread_lifecycle(self, redis_event_bus):
+    def test_thread_lifecycle(self, redis_event_bus, fake_redis_client):
         """测试线程生命周期。"""
         from event_bus_framework.adapters.redis_streams import IMessageHandler
         
@@ -288,14 +293,20 @@ class TestMessageHandlerLoopThread:
             def handle_message(self, topic: str, message_data: Dict[str, Any]) -> None:
                 pass
         
-        handlers = [MockHandler()]
-        
-        thread = MessageHandlerLoopThread(
-            event_bus=redis_event_bus,
+        mock_consumer_group = RedisStreamConsumerGroup(
+            redis_client=fake_redis_client,
             topic="test_topic",
-            handlers=handlers,
-            consumer_group="test_group",
+            group_name="test_group",
             consumer_name="test_consumer"
+        )
+        
+        thread = MessageProcessingThread(
+            topic="test_topic",
+            group_name="test_group",
+            consumer_name="test_consumer",
+            handler=MockHandler(),
+            consumer_group=mock_consumer_group,
+            event_bus=redis_event_bus
         )
         
         # 启动线程

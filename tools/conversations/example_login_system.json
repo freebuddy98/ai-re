@@ -1,0 +1,37 @@
+{
+  "session_id": "example-session-001",
+  "channel_id": "channel_example_001",
+  "created_at": "2024-01-15T10:00:00Z",
+  "messages": [
+    {
+      "timestamp": "2024-01-15T10:00:00Z",
+      "speaker_type": "analyst",
+      "text": "您好！欢迎来到需求分析会议。请告诉我您希望开发什么样的系统？",
+      "event_sent": false
+    },
+    {
+      "timestamp": "2024-01-15T10:01:00Z",
+      "speaker_type": "client",
+      "text": "我们需要开发一个用户登录系统，用户可以通过用户名和密码登录我们的网站。",
+      "event_sent": true
+    },
+    {
+      "timestamp": "2024-01-15T10:02:00Z",
+      "speaker_type": "analyst",
+      "text": "好的，登录系统是一个核心功能。您希望支持哪些登录方式？只是用户名密码，还是也要支持其他方式，比如手机号、邮箱或者第三方登录？",
+      "event_sent": false
+    },
+    {
+      "timestamp": "2024-01-15T10:03:00Z",
+      "speaker_type": "client",
+      "text": "除了用户名密码外，我们还希望支持手机号验证码登录，以及微信、支付宝等第三方登录。",
+      "event_sent": true
+    },
+    {
+      "timestamp": "2024-01-15T10:04:00Z",
+      "speaker_type": "analyst",
+      "text": "明白了。关于安全性方面，您有什么特殊要求吗？比如密码强度、登录失败次数限制、会话超时等？",
+      "event_sent": false
+    }
+  ]
+} 
